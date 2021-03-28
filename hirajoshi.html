@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fretboard scale</title>
+<style>
+
+body {
+  margin-top: 5em;
+}
+.fretboard {
+  border: 1px solid black;
+  position: relative;
+}
+
+.frets {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  justify-items: end;
+}
+
+.fret {
+  width: .3em;
+  background-image: linear-gradient(to left, #aaa, #ccc);
+}
+
+.dots {
+  /* position: relative; */
+  /* background-color: #fff; */
+  /* border-top: 1px solid black; */
+}
+.dot {
+  justify-self: center;
+  font-size: .6rem;
+}
+.dot:nth-child(4)::before,
+.dot:nth-child(6)::before,
+.dot:nth-child(8)::before {
+  content: '\2B24';
+}
+.dot:nth-child(13)::before {
+  content: '\2B24\2B24';
+}
+
+.frets,
+.string,
+.dots {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns:
+    1em
+
+    1fr
+    0.9438743126816934fr
+    0.8908987181403393fr
+    0.8408964152537146fr
+    0.7937005259840997fr
+    0.7491535384383408fr
+    0.7071067811865475fr
+    0.6674199270850172fr
+    0.6299605249474366fr
+    0.5946035575013605fr
+    0.5612310241546865fr
+    0.5297315471796477fr
+    0.5fr
+    0.4719371563408467fr
+    0.44544935907016964fr
+    0.42044820762685730fr
+    0.39685026299204984fr
+    0.3745767692191704fr
+    0.35355339059327373fr
+    0.3337099635425086fr
+    0.31498026247371824fr
+    0.29730177875068026fr
+    0.28061551207734325fr
+    0.2648657735898238fr;
+}
+
+.note {
+  font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  font-size: 12px;
+  justify-self: center;
+  align-self: center;
+  vertical-align: middle;
+  position: relative;
+  background-color: #303030;
+  color: #fff;
+  border-radius: 50%;
+  width: 2.5em;
+  line-height: 2.5;
+  text-align: center;
+  transform:  scale(1);
+  opacity: 1;
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+.note--disabled {
+  transform: scale(0);
+  opacity: 0;
+}
+.note--tonic {
+  box-shadow: inset 0 0 0 .2em #303030;
+  background-color: #d4d4d4;
+  color: #333;
+  font-weight: bold;
+}
+.note--A::before { content: 'A' }
+.note--Bb::before { content: 'B♭' }
+.note--B::before { content: 'B'; }
+.note--C::before { content: 'C'; }
+.note--Db::before { content: 'D♭'; }
+.note--D::before { content: 'D'; }
+.note--Eb::before { content: 'E♭'; }
+.note--E::before { content: 'E'; }
+.note--F::before { content: 'F'; }
+.note--Gb::before { content: 'G♭'; }
+.note--G::before { content: 'G'; }
+.note--Ab::before { content: 'A♭'; }
+
+.fretboard--usesharp .note--Bb::before { content: 'A♯' }
+.fretboard--usesharp .note--Db::before { content: 'C♯'; }
+.fretboard--usesharp .note--Eb::before { content: 'D♯'; }
+.fretboard--usesharp .note--Gb::before { content: 'F♯'; }
+.fretboard--usesharp .note--Ab::before { content: 'G♯'; }
+
+.string {
+  padding: .5em 0;
+  position: relative;
+  z-index: 1;
+}
+
+.string::before {
+  position: absolute;
+  content: '';
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: .2em;
+  background-image: linear-gradient(to top, #9ea1c2, #777a97 );
+}
+.string:nth-last-of-type(1)::before {
+  height: .4em;
+}
+
+.error::before {
+  content: '\2757';
+}
+
+.nav {
+  display: flex;
+}
+
+.print_button {
+  justify-self: flex-end;
+  align-self: flex-start;
+}
+
+[v-cloak] {
+  display: none;
+}
+
+@media print {
+  .noprint {
+    display: none;
+  }
+}
+
+</style>
+</head>
+<body>
+  
+<div id="app" v-cloak>
+
+  <div class="fretboard"
+    v-if="args_are_valid"
+    :class="{ 'fretboard--usesharp': usesharp }">
+    <div class="string" v-for="string_notes in strings">
+      <div class="note"
+        v-for="({ note, is_in_key }) in string_notes"
+        :class="{
+          'note--disabled': !is_in_key,
+          'note--tonic': tonic == note,
+          ['note--' + note]: true,
+        }">
+      </div>
+    </div>
+    <div class="frets">
+      <div class="fret" v-for="_ in nfrets"></div>
+    </div>
+    <div class="dots">
+      <div class="dot" v-for="_ in nfrets"></div>
+    </div>
+  </div>
+
+  <section class="noprint">
+
+    <p class="error" v-if="!tuning_is_valid">
+      <code>tunning=<span v-text="tuning"></span></code> is invalid.
+      Should be like 
+      <code>tuning=E-A-D-G-B-E</code> or 
+      <code>tuning=Eb-Ab-Db-Gb</code>
+    </p>
+    <p class="error" v-if="!scale_is_valid">
+      <code>scale=<span v-text="scale"></span></code> is invalid.
+      Should be like
+      <code>scale=o-oo-o-oo-o-</code> for Minor or
+      <code>scale=o-o-oo-o-o-o</code> for Major
+    </p>
+    <p class="error" v-if="!tonic_is_valid">
+      <code>tonic=<span v-text="tonic"></span></code> is invalid.
+      Should be like
+      <code>tonic=A</code> or 
+      <code>tonic=Gb</code>
+    </p>
+
+    <nav class="nav">
+      <ul>
+        <li><a :href="confurl('usesharp', 'true')">sharp ♯</a></li>
+        <li><a :href="confurl('usesharp', 'false')">flat ♭</a></li>
+      </ul>
+      <ul>
+        <li><a :href="confurl('tonic', 'A')">A</a></li>
+        <li><a :href="confurl('tonic', 'Bb')">B♭</a></li>
+        <li><a :href="confurl('tonic', 'B')">B</a></li>
+        <li><a :href="confurl('tonic', 'C')">C</a></li>
+        <li><a :href="confurl('tonic', 'Db')">D♭</a></li>
+        <li><a :href="confurl('tonic', 'D')">D</a></li>
+        <li><a :href="confurl('tonic', 'Eb')">E♭</a></li>
+        <li><a :href="confurl('tonic', 'E')">E</a></li>
+        <li><a :href="confurl('tonic', 'F')">F</a></li>
+        <li><a :href="confurl('tonic', 'Gb')">G♭</a></li>
+        <li><a :href="confurl('tonic', 'G')">G</a></li>
+        <li><a :href="confurl('tonic', 'Ab')">A♭</a></li>
+      </ul>
+
+      <ul>
+        <li><a :href="confurl('scale', 'o-o-oo-o-o-o')">Ionian Major</a></li>
+        <li><a :href="confurl('scale', 'o-oo-o-oo-o-')">Aeolian Minor</a></li>
+        <li><a :href="confurl('scale', 'o--o-o-o--o-')">Minor pentatonic</a></li>
+        <li><a :href="confurl('scale', 'o-oo---oo---')">Aeolian Hirajōshi</a></li>
+        <li><a :href="confurl('scale', 'oo---oo---o-')">Phrygian Hirajōshi</a></li>
+        <li><a :href="confurl('scale', 'o---oo---o-o')">Lydian Hirajōshi</a></li>
+      </ul>
+
+      <ul class="nav_tunning">
+        <li><a :href="confurl('tuning', 'E-A-D-G-B-E')">Standart E (E A D G B E)</a></li>
+        <li><a :href="confurl('tuning', 'Eb-Ab-Db-Gb-Bb-Eb')"> Standart E♭ (E♭ A♭ D♭ G♭ B♭ E♭)</a></li>
+        <li><a :href="confurl('tuning', 'A-E-A-D-G-B-E')">7 string Drop A (A E A D G B E)</a></li>
+        <li><a :href="confurl('tuning', 'Ab-Eb-Ab-Db-Gb-Bb-Eb')">7 string Drop A♭ (A♭ E♭ A♭ D♭ G♭ B♭ E♭)</a></li>
+        <li><a :href="confurl('tuning', 'Ab-Eb-Ab-Db-Gb')">5 string Drop A♭ (A♭ E♭ A♭ D♭ G♭)</a></li>
+      </ul>
+    </nav>
+
+  </section>
+
+
+</div>
+
+
+<script type="module">
+import { createApp } from 'https://unpkg.com/vue@3.0.9/dist/vue.esm-browser.prod.js';
+
+window.app = createApp({
+  computed: {
+    strings({ tonic, scale, tuning, nfrets }) {
+      const notes = ['A', 'Bb', 'B', 'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab'];
+      const tonic_i = notes.indexOf(tonic);
+      return tuning.split('-').reverse().map(open_note => {
+        const open_note_i = notes.indexOf(open_note);
+        const string_notes = [];
+        for (let fret = 0; fret < nfrets; fret++) {
+          string_notes.push({
+            note: notes[(open_note_i + fret) % 12],
+            is_in_key: scale.charAt((open_note_i + fret - tonic_i + 12) % 12) == 'o',
+          });
+        }
+        return string_notes;
+      });
+    },
+
+    nfrets() { return Number(this.get_arg('nfrets')) || 18; },
+
+    scale() { return this.get_arg('scale'); },
+    scale_is_valid() { return /^o[-o]{11}$/.test(this.scale); },
+
+    tuning() { return this.get_arg('tuning'); },
+    tuning_is_valid() { return /^([A-G]b?)(-[A-G]b?)*$/.test(this.tuning); },
+
+    tonic() { return this.get_arg('tonic'); },
+    tonic_is_valid() { return /^[A-G]b?$/.test(this.tonic); },
+
+    usesharp: vm => vm.get_arg('usesharp') == 'true',
+
+    args_are_valid() {
+      return (
+        this.tuning_is_valid &&
+        this.scale_is_valid &&
+        this.tonic_is_valid
+      );
+    },
+  },
+  data: _ => ({
+    args: null,
+  }),
+  created() {
+    window.addEventListener('hashchange', this.update_args);
+    this.update_args();
+  },
+  methods: {
+    update_args() { this.args = window.location.hash.replace(/^#/, ''); },
+    get_arg(name) { return new URLSearchParams(this.args).get(name); },
+    confurl(name, value) {
+      const qs = new URLSearchParams(this.args);
+      qs.set(name, value);
+      return '#' + qs.toString();
+    },
+  },
+})
+.mount('#app');
+
+</script>
+
+</body>
+</html>
